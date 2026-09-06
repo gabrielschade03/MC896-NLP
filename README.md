@@ -1,6 +1,19 @@
 # MC896-NLP
 Repositório para as fases do projeto de NLP
 
+## Executar a preparação dos dados
+
+Na raiz do repositório, com Python 3.10 ou superior (sem pacotes adicionais):
+
+```powershell
+python -m src.prepare_data
+python -m unittest discover -s tests -v
+```
+
+A etapa lê os CSVs de `Projeto 1/sample`, valida os dados e gera `data/prepared` com os grupos de desenvolvimento e avaliação separados por artigo. A configuração inicial usa 20% dos artigos para avaliação e semente 42.
+
+Consulte [Preparação dos dados](docs/preparacao-dados.md) para a estrutura do código, os arquivos de saída e as orientações para os dois experimentos de dicionário.
+
 # Ideia inicial — Extração de informação de casos clínicos
 
 ## Objetivo

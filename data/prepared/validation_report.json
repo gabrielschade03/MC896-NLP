@@ -1,0 +1,62 @@
+{
+  "case_amount_mismatches": [],
+  "counts": {
+    "case_articles": 50,
+    "cases": 56,
+    "metadata_articles": 50
+  },
+  "duplicate_ids": {
+    "case_id": [],
+    "metadata_article_id": []
+  },
+  "errors": [],
+  "gender_counts": {
+    "Female": 30,
+    "Male": 22,
+    "Unknown": 4
+  },
+  "invalid_age_case_ids": [],
+  "missing_fields": {
+    "cases": {
+      "age": 5,
+      "article_id": 0,
+      "case_id": 0,
+      "case_text": 0,
+      "gender": 0
+    },
+    "metadata": {
+      "article_id": 0,
+      "authors": 0,
+      "case_amount": 0,
+      "doi": 2,
+      "journal": 0,
+      "journal_detail": 0,
+      "keywords": 15,
+      "license": 0,
+      "link": 0,
+      "major_mesh_terms": 0,
+      "mesh_terms": 0,
+      "pmcid": 0,
+      "pmid": 0,
+      "title": 0,
+      "year": 0
+    }
+  },
+  "orphan_article_ids": [],
+  "splits": {
+    "development": {
+      "articles": 40,
+      "cases": 44
+    },
+    "evaluation": {
+      "articles": 10,
+      "cases": 12
+    }
+  },
+  "unused_article_ids": [],
+  "warnings": [
+    "cases.age: 5 valores vazios (não preenchidos automaticamente).",
+    "metadata.doi: 2 valores vazios (não preenchidos automaticamente).",
+    "metadata.keywords: 15 valores vazios (não preenchidos automaticamente)."
+  ]
+}
