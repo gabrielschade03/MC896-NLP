@@ -4,6 +4,8 @@
 
 O projeto transformará o texto de cada caso clínico em um grafo de conhecimento. A primeira versão será simples, baseada em dicionários, expressões regulares e regras. Não será necessário treinar um modelo.
 
+O diferencial escolhido pela equipe é reconstruir a **linha do tempo do caso**: identificar sintomas, exames, diagnósticos e tratamentos e tentar descobrir quando ocorreram e em qual ordem. A proposta envolve extração temporal, além da visualização dos resultados.
+
 ## Nós do grafo
 
 Teremos cinco tipos de nós:
@@ -68,10 +70,11 @@ Além do léxico, utilizaremos:
 2. **Tokenização por palavras:** cada frase será tokenizada, mantendo a posição dos tokens e a frase à qual pertencem. Expressões com várias palavras, como `abdominal pain`, formarão um único nó.
 3. **Expressões regulares:** para doses (`500 mg`), frequências, valores de exames, unidades e medidas.
 4. **Expressões indicadoras:** padrões como `presented with`, `diagnosed with`, `underwent` e `treated with` ajudarão a interpretar as entidades.
-5. **Negação:** expressões como `no evidence of`, `without` e `ruled out` impedirão a criação da entidade na primeira versão.
-6. **Regras de relação:** padrões linguísticos conectarão as entidades encontradas. Se aparecer a palavra diagnosed, já sabemos que é a relação DIAGNOSED_WITH. Ou seja, vamos definir as reações pelas palavras que aparecem ao redor.
-7. **Normalização e deduplicação:** sinônimos receberão o mesmo nome e uma entidade repetida no mesmo caso gerará apenas um nó. Será feito a partir do arquivo dicionário. 
+5. **Negação e incerteza:** verificar quais menções são afetadas por expressões como `no evidence of`, `ruled out` ou `suspected`. Elas não serão registradas como acontecimentos confirmados. Uma negação não elimina automaticamente as outras entidades da frase.
+6. **Regras de relação:** padrões linguísticos conectarão as entidades encontradas. Por exemplo, `was diagnosed with [Condition]` pode indicar `DIAGNOSED_WITH`, desde que o diagnóstico pertença ao paciente e não esteja negado ou apenas previsto. Uma palavra isolada não garante a relação.
+7. **Normalização e deduplicação:** sinônimos receberão o mesmo nome usando o léxico. Menções ao mesmo acontecimento poderão ser agrupadas, mas exames, sintomas ou tratamentos em momentos diferentes serão preservados como ocorrências distintas para não perder a cronologia.
 8. **Evidência:** cada extração guardará a frase original que a originou, facilitando a conferência dos resultados (para nós mesmos).
+9. **Extração temporal:** reconhecer expressões de tempo, associá-las aos acontecimentos e resolver sua referência quando houver evidência suficiente.
 
 ## Fluxo do programa
 
@@ -88,18 +91,24 @@ regex para doses, valores e unidades
         ↓
 verificação de contexto, negação e incerteza
         ↓
-normalização e remoção de duplicatas
+normalização e identificação de ocorrências distintas
         ↓
 criação dos nós e identificação das relações
         ↓
+extração de expressões temporais e associação aos acontecimentos
+        ↓
+resolução das referências de tempo e ordenação parcial
+        ↓
 nodes.csv e edges.csv
+        ↓
+grafo e linha do tempo com evidências
 ```
 
 ## Exemplo
 
 Texto:
 
-> The patient presented with fever. A chest CT was performed. Pneumonia was diagnosed and treatment with amoxicillin was initiated.
+> The patient presented with fever. A chest CT was performed. Pneumonia was diagnosed. Amoxicillin was initiated to treat the pneumonia.
 
 Nós:
 
@@ -129,3 +138,110 @@ O resultado será exportado em duas tabelas:
 - `edges.csv`: relações entre os nós.
 
 Depois, alguns casos serão revisados manualmente para identificar extrações corretas, informações não encontradas e falsos positivos. Por fim, os grafos poderão ser visualizados de forma interativa, exibindo a frase original associada a cada entidade.
+
+## Diferencial escolhido: linha do tempo clínica
+
+### O que queremos descobrir
+
+A pergunta central é: **até que ponto técnicas baseadas em regras conseguem reconstruir a ordem dos acontecimentos de um relato clínico?**
+
+Exemplos de informações desejadas:
+
+- quando os sintomas começaram;
+- quando um exame foi realizado;
+- quando uma condição foi diagnosticada;
+- quando um tratamento começou e, se informado, quanto tempo durou.
+
+A data do diagnóstico não é necessariamente a data de início da doença. Também não podemos assumir que os acontecimentos ocorreram na ordem em que aparecem no texto: um relato pode mencionar uma cirurgia e depois voltar aos sintomas anteriores.
+
+### Exemplo concreto
+
+Texto fictício:
+
+> Fever began three days before admission. A CT scan was performed two days after admission. One day after the CT scan, treatment with amoxicillin was initiated.
+
+Usando a internação como referência, sem precisar conhecer sua data no calendário:
+
+| Acontecimento | Expressão encontrada | Interpretação |
+|---|---|---|
+| Início da febre | `three days before admission` | Dia −3 |
+| Internação | `admission` | Dia 0: referência do caso |
+| Realização da tomografia | `two days after admission` | Dia +2 |
+| Início da amoxicilina | `one day after the CT scan` | Dia +3: um dia depois do exame |
+
+A internação pode ser um marco guardado nos atributos de `Case`, sem criar um sexto tipo de nó. O ponto mais desafiador do exemplo é ligar o início do tratamento ao exame e combinar os dois deslocamentos temporais.
+
+### Como extrair essas informações
+
+**1. Encontrar os acontecimentos.** Usar o léxico e as regras já planejadas. Expressões como `began`, `was performed`, `was diagnosed` e `was initiated` ajudam a identificar a ação: início, realização ou diagnóstico.
+
+**2. Encontrar expressões temporais.** Usar regex e listas de expressões, reconhecendo números escritos em algarismos ou palavras (`3` e `three`).
+
+| Categoria | Exemplos | O que guardar |
+|---|---|---|
+| Data explícita | `on 12 March 2020` | Data, quando não ambígua |
+| Deslocamento relativo | `two days after admission` | Quantidade, unidade, direção e referência |
+| Marco clínico | `on admission`, `after surgery` | Referência e relação com ela |
+| Duração | `for five days` | Duração, sem inventar uma data de início |
+| Ordem sem intervalo | `before the biopsy` | Acontecimento anterior/posterior, sem número de dias |
+
+`Twice daily` é frequência de administração, não uma posição na linha do tempo. O ano de publicação do artigo também não será usado como data dos acontecimentos clínicos.
+
+**3. Associar tempo e acontecimento.** Começar com padrões dentro da mesma frase, como `[Exam] was performed [tempo]`. Não atribuir a mesma data a todas as entidades da frase. Como extensão, analisar a frase anterior para resolver expressões como `the next day`, apenas quando houver uma referência clara.
+
+**4. Resolver a referência temporal.** Se o texto disser `two days after admission`, podemos posicionar o acontecimento no dia +2 em relação à internação. Se disser apenas `after surgery`, sabemos a ordem, mas não o intervalo. Não escolher automaticamente o acontecimento mais próximo quando houver várias referências possíveis.
+
+**5. Preservar o que não foi resolvido.** Guardar a expressão e a evidência mesmo quando não for possível determinar o tempo. A linha do tempo poderá ser parcial. Não converter uma expressão ambígua em uma data aparentemente exata.
+
+### Como isso entra no grafo
+
+Manteremos os cinco tipos de nós. Cada nó clínico representará uma ocorrência no caso: duas tomografias realizadas em dias diferentes terão IDs diferentes, mesmo que compartilhem o mesmo nome normalizado.
+
+Uma proposta de atributos para o exame do exemplo:
+
+```json
+{
+  "action": "performed",
+  "time_text": "two days after admission",
+  "time_anchor": "admission",
+  "time_offset": 2,
+  "time_unit": "day",
+  "time_status": "resolved",
+  "sentence_id": 2,
+  "evidence": "A CT scan was performed two days after admission."
+}
+```
+
+`time_status` poderá ser `resolved` (referência e deslocamento conhecidos), `partial` (apenas parte da informação, como a ordem) ou `unresolved` (referência não identificada). Atributos sem informação ficarão ausentes ou nulos.
+
+Acrescentaremos uma relação temporal simples, `BEFORE`, entre ocorrências quando houver suporte textual ou cálculo a partir de uma referência comum. Por exemplo, o exame ocorre antes do início do tratamento. Não precisamos criar uma aresta entre todos os pares ordenáveis. Cada ligação temporal também guardará sua evidência ou a regra que permitiu calculá-la.
+
+Uma relação temporal não significa causalidade: o tratamento acontecer depois do exame não prova que o exame motivou o tratamento.
+
+### Escopo inicial e extensão desafiadora
+
+**Primeira versão:** reconhecer deslocamentos explícitos em relação à internação, datas claras e padrões de tempo na mesma frase; preservar ocorrências repetidas; produzir uma linha do tempo parcial com evidências. Usar a internação como dia 0 apenas nos casos em que ela estiver identificada.
+
+**Extensão:** resolver referências entre frases e entre acontecimentos, como `the next day` ou `two days after the biopsy`. Também tentar representar durações como intervalos quando o início for conhecido. Essa é a parte em que podemos encontrar limitações e documentar o que as regras não conseguiram resolver.
+
+Na visualização, cada tipo terá uma cor. Clicar em um acontecimento mostrará o trecho e a referência temporal usados. Acontecimentos sem posição definida aparecerão em uma área separada; os que tiverem apenas ordem conhecida serão apresentados sem uma escala de dias inventada.
+
+### Como avaliar
+
+Separar casos de desenvolvimento e avaliação por artigo. Nos casos de avaliação, anotar manualmente expressões temporais, acontecimentos associados, referências e algumas relações de ordem, sem ajustar as regras a esses mesmos exemplos.
+
+Verificar:
+
+- **Reconhecimento:** quais expressões temporais foram encontradas corretamente e quais faltaram (precisão e recall).
+- **Associação:** quantas expressões foram ligadas ao acontecimento correto.
+- **Resolução:** quantas referências e posições calculadas estão corretas e qual proporção ficou sem resolução.
+- **Ordenação:** comparar as relações temporais com a anotação manual e com uma versão que simplesmente segue a ordem das frases.
+
+Um resultado parcial ainda será útil se mostrarmos quais construções funcionam, quais falham e por quê. A contribuição que pretendemos investigar é a integração entre extração de entidades, identificação de acontecimentos e resolução temporal por regras, sem modelos de linguagem na extração.
+
+### Referências para fundamentar o método
+
+- [HeidelTime](https://github.com/HeidelTime/heideltime): sistema baseado em regras para reconhecer e normalizar expressões temporais. Pode servir como referência ou componente a experimentar; reconhecer a expressão não resolve automaticamente sua ligação ao acontecimento clínico.
+- [Hamon e Grabar (2014), Tuning HeidelTime for identifying time expressions in clinical texts in English and French](https://aclanthology.org/W14-1116/): trabalho sobre adaptação do HeidelTime ao texto clínico, útil para fundamentar a necessidade de regras específicas do domínio.
+
+A extração temporal já existe na literatura. O diferencial proposto para este projeto é adaptar e avaliar essas ideias nos relatos clínicos, expondo tanto as relações resolvidas quanto as lacunas, em um grafo integrado à linha do tempo.
