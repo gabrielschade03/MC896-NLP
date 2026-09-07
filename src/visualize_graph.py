@@ -7,9 +7,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_NODES = ROOT / "outputs" / "nodes.csv"
-DEFAULT_EDGES = ROOT / "outputs" / "edges.csv"
-DEFAULT_OUTPUT = ROOT / "outputs" / "graph.html"
+DEFAULT_NODES = ROOT / "outputs" / "final" / "nodes.csv"
+DEFAULT_EDGES = ROOT / "outputs" / "final" / "edges.csv"
+DEFAULT_OUTPUT = ROOT / "outputs" / "final" / "graph.html"
 
 
 def read_records(path):
