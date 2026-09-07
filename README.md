@@ -14,6 +14,29 @@ A etapa lê os CSVs de `Projeto 1/sample`, associa cada caso aos metadados do ar
 
 Consulte [Preparação dos dados](docs/preparacao-dados.md) para a estrutura do código, os arquivos de saída e as orientações para os dois experimentos de dicionário.
 
+## Visualizar o grafo
+
+Depois de gerar `outputs/nodes.csv` e `outputs/edges.csv`:
+
+```powershell
+python src/build_graph.py
+python src/visualize_graph.py
+```
+
+O segundo comando lê os dois CSVs e o texto original dos casos e escreve `outputs/graph.html`: um arquivo único, sem dependências externas, que abre com dois cliques no navegador. Para regerar a página basta rodar o comando de novo depois de alterar as regras de extração.
+
+A página tem uma lista de casos à esquerda (com busca por identificador, título ou entidade), três abas no centro e um painel de evidências à direita. Clicar em qualquer nó ou aresta mostra, no painel, os atributos extraídos e a frase original que originou a extração.
+
+| Aba | O que mostra |
+|---|---|
+| **Grafo** | O grafo do caso em layout dirigido por forças. Cada tipo de nó tem uma cor; `BEFORE` aparece tracejado em roxo e `INDICATES` em ciano. Nós arrastáveis, zoom com a roda do mouse e destaque da vizinhança ao selecionar. |
+| **Linha do tempo** | Os acontecimentos com evidência temporal, separados por tipo em faixas. O eixo horizontal é a posição no texto, não uma escala de dias; os arcos representam as arestas `BEFORE` e carregam a expressão temporal que as justificou. Os acontecimentos sem posição temporal ficam em uma área separada, abaixo. |
+| **Texto do caso** | O `case_text` com todas as menções destacadas na cor do tipo. Clicar em uma menção seleciona o nó correspondente; menções não afirmadas aparecem com sublinhado pontilhado. |
+
+O item **Visão geral**, no topo da lista, agrega as ocorrências de todos os casos pelo rótulo normalizado: o tamanho do nó indica quantas vezes o termo foi extraído e o painel lista os casos em que ele aparece. O controle de mínimo de ocorrências filtra os termos raros.
+
+Filtros por tipo de nó e a opção de ocultar menções não afirmadas valem para as três abas. Quando o grafo é grande, os rótulos só aparecem a partir de certo nível de zoom.
+
 # Ideia inicial — Extração de informação de casos clínicos
 
 ## Objetivo
