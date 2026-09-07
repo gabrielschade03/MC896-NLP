@@ -20,9 +20,9 @@ Usaremos três recursos com finalidades diferentes:
 
 | Recurso | Pergunta respondida | Exemplos |
 |---|---|---|
-| `resources/lexicon.csv` | Qual entidade clínica apareceu? | `fever`, `CT scan`, `pneumonia` |
-| `resources/triggers.csv` | O que a frase afirma sobre a entidade? | `presented with`, `diagnosed with`, `no evidence of` |
-| Regex em `src/patterns.py` | Qual estrutura variável apareceu? | `500 mg`, `180 mg/dL`, `three days after admission` |
+| `resources/v2/lexicon.csv` | Qual entidade clínica apareceu? | `fever`, `CT scan`, `pneumonia` |
+| `resources/v2/triggers.csv` | O que a frase afirma sobre a entidade? | `presented with`, `diagnosed with`, `no evidence of` |
+| Regex em `src/build_graph.py` | Qual estrutura variável apareceu? | `500 mg`, `180 mg/dL`, `three days after admission` |
 
 ### Léxico de entidades
 
@@ -73,7 +73,7 @@ As regex reconhecerão estruturas com muitas variações, que não devem ser enu
 - deslocamentos: `two days after admission`;
 - durações: `for five days`.
 
-O arquivo `src/patterns.py` concentrará essas regex e os mapas auxiliares, como a conversão de `one`, `two` e `three` para números.
+O arquivo `src/build_graph.py` concentra essas regex e os mapas auxiliares, como a conversão de `one`, `two` e `three` para números.
 
 ## Fluxo de extração
 
@@ -171,8 +171,8 @@ Duas ocorrências do mesmo exame ou tratamento em momentos diferentes deverão p
 Os sinônimos serão convertidos para a forma `canonical`. Cada nó e aresta guardará a frase que justificou sua criação. No final, os resultados serão gravados em:
 
 ```text
-outputs/nodes.csv
-outputs/edges.csv
+outputs/full/v2/nodes.csv
+outputs/full/v2/edges.csv
 ```
 
 Esquema dos nós:

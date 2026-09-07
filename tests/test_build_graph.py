@@ -18,16 +18,20 @@ class BuildGraphTest(unittest.TestCase):
             {"term": "ECG", "type": "Exam", "canonical": "electrocardiogram", "source": "manual"},
             {"term": "acute coronary syndrome", "type": "Condition", "canonical": "acute coronary syndrome", "source": "manual"},
             {"term": "hypertension", "type": "Condition", "canonical": "hypertension", "source": "manual"},
+            {"term": "pneumonia", "type": "Condition", "canonical": "pneumonia", "source": "manual"},
         ], "term")
         self.triggers = prepare_entries([
             {"phrase": "presented with", "kind": "relation", "value": "HAS_SYMPTOM"},
             {"phrase": "treated with", "kind": "relation", "value": "RECEIVED_TREATMENT"},
+            {"phrase": "revealed", "kind": "relation", "value": "INDICATES"},
             {"phrase": "no", "kind": "negation", "value": "NEGATED"},
             {"phrase": "possible", "kind": "uncertainty", "value": "SUSPECTED"},
             {"phrase": "cannot be excluded", "kind": "uncertainty", "value": "SUSPECTED"},
             {"phrase": "resolution of", "kind": "resolution", "value": "RESOLVED"},
             {"phrase": "was suggested", "kind": "not_performed", "value": "NOT_PERFORMED"},
             {"phrase": "was refused", "kind": "not_performed", "value": "NOT_PERFORMED"},
+            {"phrase": "to treat", "kind": "treatment_target", "value": "TREATS"},
+            {"phrase": "treatment for", "kind": "treatment_target", "value": "TREATS"},
         ], "phrase")
 
     def test_creates_case_entity_nodes_and_edges(self):
@@ -100,6 +104,57 @@ class BuildGraphTest(unittest.TestCase):
         _, edges = build_graph(cases, self.lexicon, self.triggers)
         self.assertNotIn("BEFORE", [edge["relation"] for edge in edges])
 
+    def test_before_does_not_connect_the_same_concept_to_itself(self):
+        cases = [{
+            "case_id": "c1",
+            "case_text": "Aspirin was given. Two days later, aspirin was given again.",
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertNotIn("BEFORE", [edge["relation"] for edge in edges])
+
+    def test_anchored_time_is_not_attached_to_the_previous_entity(self):
+        cases = [{
+            "case_id": "c1",
+            "case_text": "Aspirin was given. CT was performed two days after admission.",
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertNotIn("BEFORE", [edge["relation"] for edge in edges])
+
+    def test_mid_sentence_later_does_not_reuse_unrelated_previous_entity(self):
+        cases = [{
+            "case_id": "c1",
+            "case_text": (
+                "Aspirin was given. The discussion noted that the patient stopped "
+                "smoking, and hypertension appeared four months later."
+            ),
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertNotIn("BEFORE", [edge["relation"] for edge in edges])
+
+    def test_indicates_requires_exam_trigger_condition_order(self):
+        cases = [{
+            "case_id": "c1",
+            "case_text": (
+                "Computed tomography revealed a 12.5 mm finding consistent with "
+                "pneumonia."
+            ),
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertEqual(
+            [edge["relation"] for edge in edges].count("INDICATES"), 1
+        )
+
+    def test_condition_before_result_trigger_is_not_indicated_by_exam(self):
+        cases = [{
+            "case_id": "c1",
+            "case_text": (
+                "Acute coronary syndrome was considered, and computed tomography "
+                "revealed nonspecific opacities."
+            ),
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertNotIn("INDICATES", [edge["relation"] for edge in edges])
+
     def test_uncertainty_can_follow_condition(self):
         cases = [{
             "case_id": "c1",
@@ -116,6 +171,34 @@ class BuildGraphTest(unittest.TestCase):
         nodes, _ = build_graph(cases, self.lexicon, self.triggers)
         exam = next(node for node in nodes if node["type"] == "Exam")
         self.assertNotIn("measurement", exam["attributes"])
+
+    def test_treats_requires_explicit_evidence(self):
+        cases = [{
+            "case_id": "c1", "case_text": "Aspirin was given to treat pneumonia."
+        }]
+        nodes, edges = build_graph(cases, self.lexicon, self.triggers)
+        treats = [edge for edge in edges if edge["relation"] == "TREATS"]
+        self.assertEqual(len(treats), 1)
+        source = next(node for node in nodes if node["node_id"] == treats[0]["source_id"])
+        target = next(node for node in nodes if node["node_id"] == treats[0]["target_id"])
+        self.assertEqual(source["type"], "Treatment")
+        self.assertEqual(target["type"], "Condition")
+
+    def test_cooccurrence_alone_does_not_create_treats(self):
+        cases = [{
+            "case_id": "c1", "case_text": "The patient had pneumonia and used aspirin."
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertNotIn("TREATS", [edge["relation"] for edge in edges])
+
+    def test_treatment_for_creates_treats(self):
+        cases = [{
+            "case_id": "c1", "case_text": "The treatment for pneumonia was aspirin."
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertEqual(
+            [edge["relation"] for edge in edges].count("TREATS"), 1
+        )
 
 
 if __name__ == "__main__":

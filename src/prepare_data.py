@@ -66,11 +66,18 @@ def main():
 
     development, evaluation = split_data(cases, metadata)
 
+    all_cases = [
+        *({**record, "split": "development"} for record in development),
+        *({**record, "split": "evaluation"} for record in evaluation),
+    ]
+
     write_csv(OUTPUT_DIR / "development.csv", development)
     write_csv(OUTPUT_DIR / "evaluation.csv", evaluation)
+    write_csv(OUTPUT_DIR / "all_cases.csv", all_cases)
 
     print(f"Desenvolvimento: {len(development)} casos")
     print(f"Avaliação: {len(evaluation)} casos")
+    print(f"Consolidado: {len(all_cases)} casos")
 
 
 if __name__ == "__main__":

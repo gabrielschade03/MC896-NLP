@@ -12,10 +12,10 @@ Serão mantidos dois dicionários:
 
 | Arquivo | Conteúdo | Exemplos |
 |---|---|---|
-| `resources/lexicon.csv` | Entidades que podem virar nós | `fever`, `CT scan`, `pneumonia`, `aspirin` |
-| `resources/triggers.csv` | Expressões que ajudam a criar relações ou interpretar o contexto | `presented with`, `diagnosed with`, `treated with` |
+| `resources/v2/lexicon.csv` | Entidades que podem virar nós | `fever`, `CT scan`, `pneumonia`, `aspirin` |
+| `resources/v2/triggers.csv` | Expressões que ajudam a criar relações ou interpretar o contexto | `presented with`, `diagnosed with`, `treated with` |
 
-Doses, valores e expressões temporais não entrarão nesses dicionários, pois possuem muitas variações. Elas serão identificadas por regex em `src/patterns.py`.
+Doses, valores e expressões temporais não entrarão nesses dicionários, pois possuem muitas variações. Elas são identificadas por regex em `src/build_graph.py`.
 
 ## 1. Montagem do léxico de entidades
 
