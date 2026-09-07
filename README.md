@@ -10,7 +10,16 @@ python src/prepare_data.py
 python -m unittest discover -s tests -v
 ```
 
-A etapa lê os CSVs de `Projeto 1/sample`, associa cada caso aos metadados do artigo e gera `data/prepared/development.csv` e `data/prepared/evaluation.csv`. A configuração inicial usa 20% dos artigos para avaliação e semente 42.
+A etapa lê os CSVs de `Projeto 1/sample`, associa cada caso aos metadados do artigo e gera `data/prepared/development.csv`, `data/prepared/evaluation.csv` e `data/prepared/all_cases.csv`. O arquivo consolidado identifica a origem de cada caso na coluna `split`. A configuração inicial usa 20% dos artigos para avaliação e semente 42.
+
+Para gerar o grafo consolidado com a versão 2 do léxico e dos triggers:
+
+```powershell
+python -m src.build_graph
+python -m src.visualize_graph
+```
+
+Esses comandos usam `data/prepared/all_cases.csv` e os recursos em `resources/v2`, gerando `outputs/final/nodes.csv`, `outputs/final/edges.csv` e `outputs/final/graph.html`.
 
 Consulte [Preparação dos dados](docs/preparacao-dados.md) para a estrutura do código, os arquivos de saída e as orientações para os dois experimentos de dicionário.
 
