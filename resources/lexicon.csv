@@ -1,0 +1,79 @@
+term,type,canonical,source
+abdominal distension,Symptom,abdominal distension,case_text
+abdominal pain,Symptom,abdominal pain,case_text
+ascites,Symptom,ascites,case_text
+breathlessness,Symptom,dyspnea,case_text
+chest pain,Symptom,chest pain,case_text
+chills,Symptom,chills,case_text
+constipation,Symptom,constipation,case_text
+coughed,Symptom,cough,case_text
+diarrhea,Symptom,diarrhea,case_text
+dyspnea,Symptom,dyspnea,case_text
+edema,Symptom,edema,case_text
+emesis,Symptom,vomiting,case_text
+fatigue,Symptom,fatigue,case_text
+fever,Symptom,fever,case_text
+headache,Symptom,headache,case_text
+nausea,Symptom,nausea,case_text
+respiratory distress,Symptom,respiratory distress,case_text
+vomiting,Symptom,vomiting,case_text
+weight loss,Symptom,weight loss,case_text
+dysphagia,Symptom,dysphagia,case_text
+biopsy,Exam,biopsy,case_text
+blood tests,Exam,blood test,case_text
+computed tomography,Exam,computed tomography,case_text
+CT scan,Exam,computed tomography,case_text
+echocardiography,Exam,echocardiography,case_text
+electrocardiogram,Exam,electrocardiogram,case_text
+electroencephalogram,Exam,electroencephalogram,case_text
+EKG,Exam,electrocardiogram,case_text
+endoscopy,Exam,endoscopy,case_text
+esophagogastroduodenoscopy,Exam,esophagogastroduodenoscopy,case_text
+EUS-FNA,Exam,endoscopic ultrasound-guided fine-needle aspiration,case_text
+glucose tolerance test,Exam,glucose tolerance test,case_text
+GTT,Exam,glucose tolerance test,case_text
+laboratory studies,Exam,laboratory testing,case_text
+magnetic resonance imaging,Exam,magnetic resonance imaging,case_text
+MRI,Exam,magnetic resonance imaging,case_text
+OCT,Exam,optical coherence tomography,case_text
+transesophageal echocardiography,Exam,transesophageal echocardiography,case_text
+transvaginal ultrasonography,Exam,transvaginal ultrasonography,case_text
+ultrasonography,Exam,ultrasonography,case_text
+cellulitis,Condition,cellulitis,case_text
+chronic kidney disease,Condition,chronic kidney disease,case_text
+COVID-19,Condition,COVID-19,case_text
+diabetes mellitus,Condition,diabetes mellitus,case_text
+esophagobronchial fistula,Condition,esophagobronchial fistula,case_text
+gastric duplication cyst,Condition,gastric duplication cyst,case_text
+gastric outlet obstruction,Condition,gastric outlet obstruction,case_text
+heart failure,Condition,heart failure,case_text
+hypothyroidism,Condition,hypothyroidism,case_text
+infective endocarditis,Condition,infective endocarditis,case_text
+autoimmune hemolytic anemia,Condition,autoimmune hemolytic anemia,case_text
+parastomal hernia,Condition,parastomal hernia,case_text
+pneumothorax,Condition,pneumothorax,case_text
+pressure injury,Condition,pressure injury,case_text
+pulmonary adenocarcinoma,Condition,pulmonary adenocarcinoma,case_text
+SLE,Condition,systemic lupus erythematosus,case_text
+tuberculous splenic abscess,Condition,tuberculous splenic abscess,case_text
+ventricular septal defect,Condition,ventricular septal defect,case_text
+acyclovir,Treatment,acyclovir,case_text
+alectinib,Treatment,alectinib,case_text
+blood transfusion,Treatment,blood transfusion,case_text
+chemotherapy,Treatment,chemotherapy,case_text
+diltiazem,Treatment,diltiazem,case_text
+ethambutol,Treatment,ethambutol,case_text
+fluid resuscitation,Treatment,fluid resuscitation,case_text
+hydroxychloroquine,Treatment,hydroxychloroquine,case_text
+insulin,Treatment,insulin,case_text
+intubation,Treatment,intubation,case_text
+isoniazid,Treatment,isoniazid,case_text
+levothyroxine,Treatment,levothyroxine,case_text
+meropenem,Treatment,meropenem,case_text
+methylprednisolone,Treatment,methylprednisolone,case_text
+oral iron replacement,Treatment,oral iron replacement,case_text
+oxcarbazepine,Treatment,oxcarbazepine,case_text
+prednisone,Treatment,prednisone,case_text
+pyrazinamide,Treatment,pyrazinamide,case_text
+rifampin,Treatment,rifampin,case_text
+valproic acid,Treatment,valproic acid,case_text

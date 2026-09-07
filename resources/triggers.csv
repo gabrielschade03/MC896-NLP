@@ -1,0 +1,22 @@
+phrase,kind,value
+presented with,relation,HAS_SYMPTOM
+underwent,relation,UNDERWENT_EXAM
+diagnosed with,relation,DIAGNOSED_WITH
+diagnosed as,relation,DIAGNOSED_WITH
+treated with,relation,RECEIVED_TREATMENT
+treatment with,relation,RECEIVED_TREATMENT
+started on,relation,RECEIVED_TREATMENT
+revealed,relation,INDICATES
+showed,relation,INDICATES
+consistent with,relation,INDICATES
+denied,negation,NEGATED
+no evidence of,negation,NEGATED
+ruled out,negation,NEGATED
+without,negation,NEGATED
+suspected,uncertainty,SUSPECTED
+possible,uncertainty,SUSPECTED
+suggestive of,uncertainty,SUSPECTED
+on admission,temporal_anchor,admission
+at admission,temporal_anchor,admission
+postoperatively,temporal_anchor,postoperative
+preoperatively,temporal_anchor,preoperative
