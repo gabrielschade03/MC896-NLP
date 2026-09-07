@@ -23,6 +23,7 @@ class BuildGraphTest(unittest.TestCase):
         self.triggers = prepare_entries([
             {"phrase": "presented with", "kind": "relation", "value": "HAS_SYMPTOM"},
             {"phrase": "treated with", "kind": "relation", "value": "RECEIVED_TREATMENT"},
+            {"phrase": "revealed", "kind": "relation", "value": "INDICATES"},
             {"phrase": "no", "kind": "negation", "value": "NEGATED"},
             {"phrase": "possible", "kind": "uncertainty", "value": "SUSPECTED"},
             {"phrase": "cannot be excluded", "kind": "uncertainty", "value": "SUSPECTED"},
@@ -102,6 +103,57 @@ class BuildGraphTest(unittest.TestCase):
         }]
         _, edges = build_graph(cases, self.lexicon, self.triggers)
         self.assertNotIn("BEFORE", [edge["relation"] for edge in edges])
+
+    def test_before_does_not_connect_the_same_concept_to_itself(self):
+        cases = [{
+            "case_id": "c1",
+            "case_text": "Aspirin was given. Two days later, aspirin was given again.",
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertNotIn("BEFORE", [edge["relation"] for edge in edges])
+
+    def test_anchored_time_is_not_attached_to_the_previous_entity(self):
+        cases = [{
+            "case_id": "c1",
+            "case_text": "Aspirin was given. CT was performed two days after admission.",
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertNotIn("BEFORE", [edge["relation"] for edge in edges])
+
+    def test_mid_sentence_later_does_not_reuse_unrelated_previous_entity(self):
+        cases = [{
+            "case_id": "c1",
+            "case_text": (
+                "Aspirin was given. The discussion noted that the patient stopped "
+                "smoking, and hypertension appeared four months later."
+            ),
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertNotIn("BEFORE", [edge["relation"] for edge in edges])
+
+    def test_indicates_requires_exam_trigger_condition_order(self):
+        cases = [{
+            "case_id": "c1",
+            "case_text": (
+                "Computed tomography revealed a 12.5 mm finding consistent with "
+                "pneumonia."
+            ),
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertEqual(
+            [edge["relation"] for edge in edges].count("INDICATES"), 1
+        )
+
+    def test_condition_before_result_trigger_is_not_indicated_by_exam(self):
+        cases = [{
+            "case_id": "c1",
+            "case_text": (
+                "Acute coronary syndrome was considered, and computed tomography "
+                "revealed nonspecific opacities."
+            ),
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertNotIn("INDICATES", [edge["relation"] for edge in edges])
 
     def test_uncertainty_can_follow_condition(self):
         cases = [{

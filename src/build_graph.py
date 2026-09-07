@@ -9,11 +9,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_INPUT = ROOT / "data" / "prepared" / "development.csv"
-DEFAULT_NODES = ROOT / "outputs" / "nodes.csv"
-DEFAULT_EDGES = ROOT / "outputs" / "edges.csv"
-LEXICON_PATH = ROOT / "resources" / "lexicon.csv"
-TRIGGERS_PATH = ROOT / "resources" / "triggers.csv"
+DEFAULT_INPUT = ROOT / "data" / "prepared" / "all_cases.csv"
+DEFAULT_NODES = ROOT / "outputs" / "final" / "nodes.csv"
+DEFAULT_EDGES = ROOT / "outputs" / "final" / "edges.csv"
+LEXICON_PATH = ROOT / "resources" / "v2" / "lexicon.csv"
+TRIGGERS_PATH = ROOT / "resources" / "v2" / "triggers.csv"
 
 CASE_RELATIONS = {
     "Symptom": "HAS_SYMPTOM",
@@ -368,12 +368,16 @@ def _entity_times(entity, patterns, triggers):
 
 
 def _is_forward_time(text):
-    value = text.lower()
-    if "before" in value or "prior to" in value:
-        return False
+    """Aceita apenas referências que retomam o evento narrativo anterior.
+
+    Expressões como ``after surgery`` e ``POD 3`` possuem uma âncora própria.
+    Como essa âncora ainda não é representada por um nó, ligá-las ao último
+    termo extraído criaria uma relação temporal inventada.
+    """
     return bool(re.search(
-        r"\b(?:later|after|following|next|day of hospitalization|day of admission|pod|postoperative day)\b",
-        value,
+        r"\b(?:later|the\s+(?:following|next)\s+day)\b",
+        text,
+        re.IGNORECASE,
     ))
 
 
@@ -408,6 +412,38 @@ def _near_nodes(item, nodes, max_distance=180):
         node for node in nodes
         if abs(center - (node["start"] + node["end"]) / 2) <= max_distance
     ]
+
+
+def _bridged_pair(trigger, sources, targets, max_gap=350):
+    """Encontra ``fonte -> gatilho -> destino`` na mesma oração.
+
+    A simples presença de um exame e de uma condição na frase não demonstra
+    que o resultado do exame indique aquela condição. A ordem e a proximidade
+    tornam a ligação explícita e evitam associar uma suspeita mencionada antes
+    do exame ao resultado descrito depois dele.
+    """
+    sentence_start = trigger["sentence_start"]
+    text = trigger["sentence_text"]
+    candidates = []
+    for source in sources:
+        source_gap = trigger["start"] - source["end"]
+        if not 0 <= source_gap <= max_gap:
+            continue
+        before = text[source["end"] - sentence_start:trigger["start"] - sentence_start]
+        if re.search(r"[;:]|(?<!\d)\.(?!\d)", before):
+            continue
+        for target in targets:
+            target_gap = target["start"] - trigger["end"]
+            if not 0 <= target_gap <= max_gap:
+                continue
+            after = text[trigger["end"] - sentence_start:target["start"] - sentence_start]
+            if re.search(r"[;:]|(?<!\d)\.(?!\d)", after):
+                continue
+            candidates.append((source_gap + target_gap, source, target))
+    if not candidates:
+        return None, None
+    _, source, target = min(candidates, key=lambda item: item[0])
+    return source, target
 
 
 def build_graph(cases, lexicon, triggers):
@@ -457,6 +493,7 @@ def build_graph(cases, lexicon, triggers):
             by_sentence[item["sentence_id"]].append(item)
 
         previous_event = None
+        previous_event_sentence_id = None
         treatment_edges = set()
         for sentence_id in sorted(by_sentence):
             items = by_sentence[sentence_id]
@@ -553,29 +590,44 @@ def build_graph(cases, lexicon, triggers):
                     entity["sentence_text"],
                 )
 
-            # "X days later" conecta o último evento anterior ao primeiro atual.
+            # "X days later" conecta apenas um evento narrativo imediatamente
+            # anterior a uma entidade que aparece depois da expressão temporal.
             relative_times = [
                 p for p in patterns
                 if p["match_type"] == "relative_time"
                 and _is_forward_time(p["match_text"])
+                and _local_start(p) <= 60
             ]
-            if previous_event and created and relative_times:
-                timed_nodes = [
-                    node for node in created
-                    if relative_times[0]["match_text"] in node["attributes"].get("time", [])
-                ]
-                target = timed_nodes[0] if timed_nodes else created[0]
-                add_edge(
-                    case_id,
-                    previous_event["node_id"],
-                    target["node_id"],
-                    "BEFORE",
-                    {
-                        "time_expression": relative_times[0]["match_text"],
-                        "method": "explicit_relative_time",
-                    },
-                    target["evidence"],
-                )
+            if (
+                previous_event
+                and created
+                and relative_times
+                and sentence_id - previous_event_sentence_id <= 2
+            ):
+                for relative_time in relative_times:
+                    timed_nodes = [
+                        node for node in created
+                        if relative_time["end"] <= node["start"]
+                        and relative_time["match_text"]
+                        in node["attributes"].get("time", [])
+                    ]
+                    if not timed_nodes:
+                        continue
+                    target = timed_nodes[0]
+                    if previous_event["label"] == target["label"]:
+                        continue
+                    add_edge(
+                        case_id,
+                        previous_event["node_id"],
+                        target["node_id"],
+                        "BEFORE",
+                        {
+                            "time_expression": relative_time["match_text"],
+                            "method": "explicit_relative_time",
+                        },
+                        target["evidence"],
+                    )
+                    break
 
             # Exame + gatilho de resultado + condição na mesma frase.
             indication_triggers = [
@@ -585,10 +637,15 @@ def build_graph(cases, lexicon, triggers):
             ]
             exams = [node for node in created if node["type"] == "Exam"]
             conditions = [node for node in created if node["type"] == "Condition"]
-            if indication_triggers and exams and conditions:
-                trigger = indication_triggers[0]
-                exam = _nearest(trigger, exams)
-                condition = _nearest(trigger, conditions)
+            indication_edges = set()
+            for trigger in indication_triggers:
+                exam, condition = _bridged_pair(trigger, exams, conditions)
+                if not exam or not condition:
+                    continue
+                pair = (exam["node_id"], condition["node_id"])
+                if pair in indication_edges:
+                    continue
+                indication_edges.add(pair)
                 add_edge(
                     case_id,
                     exam["node_id"],
@@ -659,6 +716,7 @@ def build_graph(cases, lexicon, triggers):
 
             if created:
                 previous_event = created[-1]
+                previous_event_sentence_id = sentence_id
 
     return nodes, edges
 
@@ -679,14 +737,16 @@ def parse_args(argv=None):
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--nodes", type=Path, default=DEFAULT_NODES)
     parser.add_argument("--edges", type=Path, default=DEFAULT_EDGES)
+    parser.add_argument("--lexicon", type=Path, default=LEXICON_PATH)
+    parser.add_argument("--triggers", type=Path, default=TRIGGERS_PATH)
     return parser.parse_args(argv)
 
 
 def main(argv=None):
     args = parse_args(argv)
     cases = read_csv(args.input)
-    lexicon = prepare_entries(read_csv(LEXICON_PATH), "term")
-    triggers = prepare_entries(read_csv(TRIGGERS_PATH), "phrase")
+    lexicon = prepare_entries(read_csv(args.lexicon), "term")
+    triggers = prepare_entries(read_csv(args.triggers), "phrase")
     nodes, edges = build_graph(cases, lexicon, triggers)
     write_records(args.nodes, nodes, NODE_FIELDS)
     write_records(args.edges, edges, EDGE_FIELDS)
