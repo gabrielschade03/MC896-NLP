@@ -171,8 +171,8 @@ Duas ocorrências do mesmo exame ou tratamento em momentos diferentes deverão p
 Os sinônimos serão convertidos para a forma `canonical`. Cada nó e aresta guardará a frase que justificou sua criação. No final, os resultados serão gravados em:
 
 ```text
-outputs/final/nodes.csv
-outputs/final/edges.csv
+outputs/full/v2/nodes.csv
+outputs/full/v2/edges.csv
 ```
 
 Esquema dos nós:

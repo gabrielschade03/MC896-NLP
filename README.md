@@ -1,27 +1,149 @@
 # MC896-NLP
-Repositório para as fases do projeto de NLP
 
-## Executar a preparação dos dados
+Este projeto extrai entidades e relações de relatos clínicos e transforma os resultados em grafos de conhecimento interativos. A implementação utiliza léxicos, gatilhos, expressões regulares e regras linguísticas; não é necessário treinar um modelo.
 
-Na raiz do repositório, com Python 3.10 ou superior (sem pacotes adicionais):
+## Como executar o projeto
+
+Os comandos abaixo devem ser executados no PowerShell, a partir da raiz do repositório. É necessário ter Python 3.10 ou superior. O projeto utiliza somente a biblioteca padrão do Python, portanto não há dependências para instalar.
+
+### 1. Preparar os dados
+
+Execute:
 
 ```powershell
 python src/prepare_data.py
-python -m unittest discover -s tests -v
 ```
 
-A etapa lê os CSVs de `Projeto 1/sample`, associa cada caso aos metadados do artigo e gera `data/prepared/development.csv`, `data/prepared/evaluation.csv` e `data/prepared/all_cases.csv`. O arquivo consolidado identifica a origem de cada caso na coluna `split`. A configuração inicial usa 20% dos artigos para avaliação e semente 42.
+Esse comando lê `cases.csv` e `metadata.csv`, associa cada caso ao artigo correspondente e cria:
 
-Para gerar o grafo consolidado com a versão 2 do léxico e dos triggers:
+| Arquivo | Conteúdo |
+|---|---|
+| `data/prepared/development.csv` | 45 casos usados para desenvolver a primeira versão |
+| `data/prepared/evaluation.csv` | 11 casos inicialmente reservados para avaliação |
+| `data/prepared/all_cases.csv` | Todos os 56 casos, com a coluna `split` |
+
+Os comandos seguintes usam `all_cases.csv`, pois o objetivo é gerar o grafo completo com os 56 casos.
+
+### 2. Extrair os nós e as arestas com a V1
+
+A V1 utiliza o léxico e os gatilhos construídos apenas com os casos de desenvolvimento:
+
+```powershell
+python -m src.build_graph --input data/prepared/all_cases.csv --lexicon resources/v1/lexicon.csv --triggers resources/v1/triggers.csv --nodes outputs/full/v1/nodes.csv --edges outputs/full/v1/edges.csv
+```
+
+O comando cria:
+
+- `outputs/full/v1/nodes.csv`: nós `Case`, `Symptom`, `Exam`, `Condition` e `Treatment`;
+- `outputs/full/v1/edges.csv`: relações estruturais, clínicas e temporais encontradas pela V1.
+
+Se esses arquivos já existirem, eles serão sobrescritos com uma nova execução completa da V1.
+
+### 3. Extrair os nós e as arestas com a V2
+
+A V2 utiliza o léxico e os gatilhos ampliados após a análise dos resultados da V1:
+
+```powershell
+python -m src.build_graph --input data/prepared/all_cases.csv --lexicon resources/v2/lexicon.csv --triggers resources/v2/triggers.csv --nodes outputs/full/v2/nodes.csv --edges outputs/full/v2/edges.csv
+```
+
+O comando cria:
+
+- `outputs/full/v2/nodes.csv`: nós extraídos pela V2;
+- `outputs/full/v2/edges.csv`: relações extraídas pela V2.
+
+Se esses arquivos já existirem, eles serão sobrescritos. Como V2 e o conjunto completo são as configurações padrão, o mesmo resultado pode ser gerado com o comando abreviado:
 
 ```powershell
 python -m src.build_graph
+```
+
+### 4. Gerar o HTML da V1
+
+Depois de gerar `nodes.csv` e `edges.csv` da V1, execute:
+
+```powershell
+python -m src.visualize_graph --nodes outputs/full/v1/nodes.csv --edges outputs/full/v1/edges.csv --output outputs/full/v1/graph.html
+```
+
+O arquivo interativo será criado em:
+
+```text
+outputs/full/v1/graph.html
+```
+
+### 5. Gerar o HTML da V2
+
+Execute:
+
+```powershell
+python -m src.visualize_graph --nodes outputs/full/v2/nodes.csv --edges outputs/full/v2/edges.csv --output outputs/full/v2/graph.html
+```
+
+O arquivo será criado em:
+
+```text
+outputs/full/v2/graph.html
+```
+
+Para a V2, também é possível usar o comando abreviado:
+
+```powershell
 python -m src.visualize_graph
 ```
 
-Esses comandos usam `data/prepared/all_cases.csv` e os recursos em `resources/v2`, gerando `outputs/final/nodes.csv`, `outputs/final/edges.csv` e `outputs/final/graph.html`.
+### 6. Abrir os grafos no navegador
 
-Consulte [Preparação dos dados](docs/preparacao-dados.md) para a estrutura do código, os arquivos de saída e as orientações para os dois experimentos de dicionário.
+Os arquivos HTML podem ser abertos diretamente pelo Explorador de Arquivos. Se preferir servi-los por um endereço local, execute um dos comandos abaixo.
+
+Para subir a V1:
+
+```powershell
+python -m http.server 8765 --directory outputs/full/v1
+```
+
+Abra [http://localhost:8765/graph.html](http://localhost:8765/graph.html).
+
+Para subir a V2 em outro terminal:
+
+```powershell
+python -m http.server 8766 --directory outputs/full/v2
+```
+
+Abra [http://localhost:8766/graph.html](http://localhost:8766/graph.html).
+
+O servidor permanece ativo enquanto o terminal estiver aberto. Pressione `Ctrl+C` para encerrá-lo. Subir o HTML não executa novamente a extração; o servidor apenas disponibiliza o arquivo já gerado.
+
+### 7. Executar os testes
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+Atualmente, a suíte possui 19 testes.
+
+### Estrutura das saídas
+
+```text
+outputs/
+├── evaluation/        # comparação da V1 e da V2 nos 11 casos reservados
+│   ├── comparison.csv
+│   ├── v1/
+│   └── v2/
+└── full/              # grafos completos com os 56 casos
+    ├── v1/
+    │   ├── nodes.csv
+    │   ├── edges.csv
+    │   └── graph.html
+    └── v2/
+        ├── nodes.csv
+        ├── edges.csv
+        └── graph.html
+```
+
+Os arquivos em `outputs/evaluation` registram o experimento realizado somente nos 11 casos de avaliação. Os arquivos em `outputs/full` são as visualizações consolidadas dos 56 casos e devem ser usados para a demonstração final.
+
+Consulte [Preparação dos dados](docs/preparacao-dados.md), [Estratégia de extração](docs/estrategia-extracao.md) e [Avaliação do extrator](docs/avaliacao-extrator.md) para mais detalhes.
 
 # Ideia inicial — Extração de informação de casos clínicos
 

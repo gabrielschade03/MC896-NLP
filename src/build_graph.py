@@ -10,8 +10,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INPUT = ROOT / "data" / "prepared" / "all_cases.csv"
-DEFAULT_NODES = ROOT / "outputs" / "final" / "nodes.csv"
-DEFAULT_EDGES = ROOT / "outputs" / "final" / "edges.csv"
+DEFAULT_NODES = ROOT / "outputs" / "full" / "v2" / "nodes.csv"
+DEFAULT_EDGES = ROOT / "outputs" / "full" / "v2" / "edges.csv"
 LEXICON_PATH = ROOT / "resources" / "v2" / "lexicon.csv"
 TRIGGERS_PATH = ROOT / "resources" / "v2" / "triggers.csv"
 

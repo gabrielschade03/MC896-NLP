@@ -231,7 +231,7 @@ A V2 foi aplicada aos 56 casos para produzir a visualização consolidada.
 - painel de evidências;
 - sequência temporal.
 
-O arquivo para a demonstração é `outputs/final/graph.html`. Use uma captura de tela no slide e, se possível, abra o HTML ao vivo durante a apresentação.
+O arquivo para a demonstração é `outputs/full/v2/graph.html`. Use uma captura de tela no slide e, se possível, abra o HTML ao vivo durante a apresentação.
 
 ## Slide 13 — Limitações e honestidade experimental
 
@@ -271,7 +271,8 @@ Uma possível continuação seria validar o extrator em novos casos não observa
 - `outputs/evaluation/comparison.csv`: números da comparação;
 - `outputs/evaluation/v1/graph.html`: visualização da V1;
 - `outputs/evaluation/v2/graph.html`: visualização da V2 nos mesmos casos;
-- `outputs/final/graph.html`: demonstração consolidada com os 56 casos.
+- `outputs/full/v1/graph.html`: demonstração consolidada da V1 com os 56 casos;
+- `outputs/full/v2/graph.html`: demonstração consolidada da V2 com os 56 casos.
 
 ## Cuidados com a linguagem dos slides
 

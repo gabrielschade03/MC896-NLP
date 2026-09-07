@@ -102,11 +102,11 @@ development.csv + evaluation.csv + all_cases.csv
         ↓
 src/build_graph.py
         ↓
-outputs/final/nodes.csv + outputs/final/edges.csv
+outputs/full/v2/nodes.csv + outputs/full/v2/edges.csv
         ↓
 src/visualize_graph.py
         ↓
-outputs/final/graph.html
+outputs/full/v2/graph.html
 ```
 
 O HTML oferece seleção de caso, busca de entidades, filtros de relações, detalhes com evidências e uma visão de sequência temporal.
@@ -178,10 +178,15 @@ outputs/
 │   ├── comparison.csv
 │   ├── v1/
 │   └── v2/
-└── final/
-    ├── nodes.csv
-    ├── edges.csv
-    └── graph.html
+└── full/
+    ├── v1/
+    │   ├── nodes.csv
+    │   ├── edges.csv
+    │   └── graph.html
+    └── v2/
+        ├── nodes.csv
+        ├── edges.csv
+        └── graph.html
 ```
 
 ## Como executar
@@ -213,4 +218,4 @@ python -m unittest discover -s tests -v
 - Não criar relações apenas porque duas entidades aparecem na mesma frase.
 - Preservar evidências e posições das extrações.
 - Executar os 19 testes após mudanças no extrator.
-- Regenerar `outputs/final` quando o código ou os recursos da V2 forem alterados.
+- Regenerar `outputs/full/v2` quando o código ou os recursos da V2 forem alterados.
