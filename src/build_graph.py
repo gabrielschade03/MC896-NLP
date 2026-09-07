@@ -401,6 +401,15 @@ def _compatible_relation(entity_type, trigger):
     return trigger["normalized_value"] == CASE_RELATIONS.get(entity_type)
 
 
+def _near_nodes(item, nodes, max_distance=180):
+    """Seleciona nós próximos ao gatilho dentro da mesma frase."""
+    center = (item["start"] + item["end"]) / 2
+    return [
+        node for node in nodes
+        if abs(center - (node["start"] + node["end"]) / 2) <= max_distance
+    ]
+
+
 def build_graph(cases, lexicon, triggers):
     """Extrai entidades e devolve listas de nós e arestas."""
     nodes = []
@@ -448,6 +457,7 @@ def build_graph(cases, lexicon, triggers):
             by_sentence[item["sentence_id"]].append(item)
 
         previous_event = None
+        treatment_edges = set()
         for sentence_id in sorted(by_sentence):
             items = by_sentence[sentence_id]
             entities = _deduplicate_aliases([
@@ -585,6 +595,65 @@ def build_graph(cases, lexicon, triggers):
                     condition["node_id"],
                     "INDICATES",
                     {"trigger": trigger["match_text"]},
+                    trigger["sentence_text"],
+                )
+
+            # Tratamento + condição só gera TREATS com evidência explícita.
+            treatments = [node for node in created if node["type"] == "Treatment"]
+            target_triggers = [
+                trigger for trigger in sentence_triggers
+                if trigger["match_type"] == "treatment_target"
+            ]
+            direct_treatment_triggers = [
+                trigger for trigger in sentence_triggers
+                if trigger["match_type"] == "relation"
+                and trigger["normalized_value"] == "RECEIVED_TREATMENT"
+                and trigger["match_text"].lower() in {
+                    "treated with", "treatment with", "managed with"
+                }
+            ]
+
+            for trigger in target_triggers:
+                nearby_treatments = _near_nodes(trigger, treatments)
+                nearby_conditions = _near_nodes(trigger, conditions)
+                for treatment in nearby_treatments:
+                    for condition in nearby_conditions:
+                        pair = (treatment["node_id"], condition["node_id"])
+                        if pair in treatment_edges:
+                            continue
+                        treatment_edges.add(pair)
+                        add_edge(
+                            case_id,
+                            treatment["node_id"],
+                            condition["node_id"],
+                            "TREATS",
+                            {
+                                "trigger": trigger["match_text"],
+                                "method": "explicit_treatment_target",
+                                "condition_assertion": condition["attributes"]["assertion"],
+                            },
+                            trigger["sentence_text"],
+                        )
+
+            for trigger in direct_treatment_triggers:
+                treatment = _nearest(trigger, treatments, max_distance=180)
+                condition = _nearest(trigger, conditions, max_distance=180)
+                if not treatment or not condition:
+                    continue
+                pair = (treatment["node_id"], condition["node_id"])
+                if pair in treatment_edges:
+                    continue
+                treatment_edges.add(pair)
+                add_edge(
+                    case_id,
+                    treatment["node_id"],
+                    condition["node_id"],
+                    "TREATS",
+                    {
+                        "trigger": trigger["match_text"],
+                        "method": "explicit_treatment_relation",
+                        "condition_assertion": condition["attributes"]["assertion"],
+                    },
                     trigger["sentence_text"],
                 )
 

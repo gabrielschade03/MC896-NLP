@@ -31,6 +31,19 @@ diagnosis was made,relation,DIAGNOSED_WITH
 final diagnosis of,relation,DIAGNOSED_WITH
 was established,relation,DIAGNOSED_WITH
 consistent with a diagnosis of,relation,DIAGNOSED_WITH
+used to treat,treatment_target,TREATS
+given to treat,treatment_target,TREATS
+to treat,treatment_target,TREATS
+to deal with,treatment_target,TREATS
+to cover,treatment_target,TREATS
+to control,treatment_target,TREATS
+for treatment of,treatment_target,TREATS
+for management of,treatment_target,TREATS
+therapy for,treatment_target,TREATS
+treatment for,treatment_target,TREATS
+long-term treatment for,treatment_target,TREATS
+medical treatment in the form of,treatment_target,TREATS
+for worsening,treatment_target,TREATS
 denied,negation,NEGATED
 no evidence of,negation,NEGATED
 ruled out,negation,NEGATED

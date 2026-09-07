@@ -18,6 +18,7 @@ class BuildGraphTest(unittest.TestCase):
             {"term": "ECG", "type": "Exam", "canonical": "electrocardiogram", "source": "manual"},
             {"term": "acute coronary syndrome", "type": "Condition", "canonical": "acute coronary syndrome", "source": "manual"},
             {"term": "hypertension", "type": "Condition", "canonical": "hypertension", "source": "manual"},
+            {"term": "pneumonia", "type": "Condition", "canonical": "pneumonia", "source": "manual"},
         ], "term")
         self.triggers = prepare_entries([
             {"phrase": "presented with", "kind": "relation", "value": "HAS_SYMPTOM"},
@@ -28,6 +29,8 @@ class BuildGraphTest(unittest.TestCase):
             {"phrase": "resolution of", "kind": "resolution", "value": "RESOLVED"},
             {"phrase": "was suggested", "kind": "not_performed", "value": "NOT_PERFORMED"},
             {"phrase": "was refused", "kind": "not_performed", "value": "NOT_PERFORMED"},
+            {"phrase": "to treat", "kind": "treatment_target", "value": "TREATS"},
+            {"phrase": "treatment for", "kind": "treatment_target", "value": "TREATS"},
         ], "phrase")
 
     def test_creates_case_entity_nodes_and_edges(self):
@@ -116,6 +119,34 @@ class BuildGraphTest(unittest.TestCase):
         nodes, _ = build_graph(cases, self.lexicon, self.triggers)
         exam = next(node for node in nodes if node["type"] == "Exam")
         self.assertNotIn("measurement", exam["attributes"])
+
+    def test_treats_requires_explicit_evidence(self):
+        cases = [{
+            "case_id": "c1", "case_text": "Aspirin was given to treat pneumonia."
+        }]
+        nodes, edges = build_graph(cases, self.lexicon, self.triggers)
+        treats = [edge for edge in edges if edge["relation"] == "TREATS"]
+        self.assertEqual(len(treats), 1)
+        source = next(node for node in nodes if node["node_id"] == treats[0]["source_id"])
+        target = next(node for node in nodes if node["node_id"] == treats[0]["target_id"])
+        self.assertEqual(source["type"], "Treatment")
+        self.assertEqual(target["type"], "Condition")
+
+    def test_cooccurrence_alone_does_not_create_treats(self):
+        cases = [{
+            "case_id": "c1", "case_text": "The patient had pneumonia and used aspirin."
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertNotIn("TREATS", [edge["relation"] for edge in edges])
+
+    def test_treatment_for_creates_treats(self):
+        cases = [{
+            "case_id": "c1", "case_text": "The treatment for pneumonia was aspirin."
+        }]
+        _, edges = build_graph(cases, self.lexicon, self.triggers)
+        self.assertEqual(
+            [edge["relation"] for edge in edges].count("TREATS"), 1
+        )
 
 
 if __name__ == "__main__":
